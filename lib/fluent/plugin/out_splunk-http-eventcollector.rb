@@ -52,8 +52,8 @@ class SplunkHTTPEventcollectorOutput < BufferedOutput
   config_param :post_retry_max, :integer, :default => 5
   config_param :post_retry_interval, :integer, :default => 5
 
-  # TODO Find better upper limits
-  config_param :batch_size_limit, :integer, :default => 262144 # 65535
+  # Splunk default upper-limit is ~1Mb
+  config_param :batch_size_limit, :integer, :default => 1000000 # 65535
   #config_param :batch_event_limit, :integer, :default => 100
 
   # Whether to allow non-UTF-8 characters in user logs. If set to true, any
@@ -158,7 +158,8 @@ class SplunkHTTPEventcollectorOutput < BufferedOutput
     placeholders = @placeholder_expander.prepare_placeholders(placeholder_values)
 
     splunk_object = Hash[
-        "time" => time.to_i,
+        # for v0.14 millisecs time precision
+        "time" => time.is_a?(Integer) ? time.to_i : time.to_f,
         "source" => if @source.nil? then tag.to_s else @placeholder_expander.expand(@source, placeholders) end,
         "sourcetype" => @placeholder_expander.expand(@sourcetype.to_s, placeholders),
         "host" => @placeholder_expander.expand(@host.to_s, placeholders),
