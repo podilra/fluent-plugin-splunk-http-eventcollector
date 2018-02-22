@@ -108,7 +108,7 @@ class SplunkHTTPEventcollectorOutput < BufferedOutput
     super
     log.trace "splunk-http-eventcollector(configure) called"
     begin
-      @splunk_uri = URI "#{@protocol}://#{@server}/services/collector"
+      @splunk_uri = URI "#{@protocol}://#{@server}/services/collector/event"
     rescue
       raise ConfigError, "Unable to parse the server into a URI."
     end
