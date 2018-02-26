@@ -23,6 +23,6 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency "rake"
   gem.add_development_dependency "test-unit", '~> 3.1'
   gem.add_development_dependency "webmock", '~> 2.3', '>= 2.3.2'
-  gem.add_runtime_dependency "fluentd", '~> 0.12.12'
+  gem.add_runtime_dependency "fluentd", '< 2', '>= 0.12.12'
   gem.add_runtime_dependency "net-http-persistent", '~> 2.9'
 end
