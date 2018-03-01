@@ -74,6 +74,11 @@ Put the following lines to your fluent.conf:
       # token: the token issued
       token YOUR-TOKEN
 
+      # proxy: The URI of a proxy server to use, or the string "env"
+      # to use the values set in the environment.
+      # default: <none>
+      #proxy http://myuser:somepassword@192.0.2.1:8080
+
       #
       # Event Parameters
       #
