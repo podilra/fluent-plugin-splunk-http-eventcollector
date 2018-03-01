@@ -10,6 +10,7 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
     verify false
     token changeme
   ]
+  TIME_OBJ = Time.parse("2010-01-02 13:14:15 UTC")
 
   def create_driver(conf=CONFIG, tag='test')
     Fluent::Test::BufferedOutputTestDriver.new(Fluent::SplunkHTTPEventcollectorOutput, tag).configure(conf)
@@ -28,19 +29,20 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
 
     d = create_driver
 
-    time = Time.parse("2010-01-02 13:14:15 UTC").to_i
-    d.emit({ "message" => "a message"}, time)
+    [TIME_OBJ.to_i, TIME_OBJ.to_f].each do |time|
+      d.emit({ "message" => "a message"}, time)
 
-    d.run
+      d.run
 
-    assert_requested :post, "https://localhost:8089/services/collector",
-      headers: {
-        "Authorization" => "Splunk changeme",
-        'Content-Type' => 'application/json',
-        'User-Agent' => 'fluent-plugin-splunk-http-eventcollector/0.0.1'
-      },
-      body: { time: time, source:"test", sourcetype: "fluentd", host: "", index: "main", event: "a message" },
-      times: 1
+      assert_requested :post, "https://localhost:8089/services/collector",
+        headers: {
+          "Authorization" => "Splunk changeme",
+          'Content-Type' => 'application/json',
+          'User-Agent' => 'fluent-plugin-splunk-http-eventcollector/0.0.1'
+        },
+        body: { time: time, source:"test", sourcetype: "fluentd", host: "", index: "main", event: "a message" },
+        times: 1
+    end
   end
 
   def test_expand
@@ -52,15 +54,16 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       sourcetype ${tag_parts[0]}
     ])
 
-    time = Time.parse("2010-01-02 13:14:15 UTC").to_i
-    d.emit({"message" => "a message", "source" => "source-from-record"}, time)
+    [TIME_OBJ.to_i, TIME_OBJ.to_f].each do |time|
+      d.emit({"message" => "a message", "source" => "source-from-record"}, time)
 
-    d.run
+      d.run
 
-    assert_requested :post, "https://localhost:8089/services/collector",
-      headers: {"Authorization" => "Splunk changeme"},
-      body: { time: time, source: "source-from-record", sourcetype: "test", host: "", index: "main", event: "a message" },
-      times: 1
+      assert_requested :post, "https://localhost:8089/services/collector",
+        headers: {"Authorization" => "Splunk changeme"},
+        body: { time: time, source: "source-from-record", sourcetype: "test", host: "", index: "main", event: "a message" },
+        times: 1
+    end
   end
 
   def test_4XX_error_retry
@@ -70,14 +73,15 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
 
     d = create_driver
 
-    time = Time.parse("2010-01-02 13:14:15 UTC").to_i
-    d.emit({ "message" => "1" }, time)
-    d.run
+    [TIME_OBJ.to_i, TIME_OBJ.to_f].each do |time|
+      d.emit({ "message" => "1" }, time)
+      d.run
 
-    assert_requested :post, "https://localhost:8089/services/collector",
-      headers: {"Authorization" => "Splunk changeme"},
-      body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "1" },
-      times: 1
+      assert_requested :post, "https://localhost:8089/services/collector",
+        headers: {"Authorization" => "Splunk changeme"},
+        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "1" },
+        times: 1
+    end
   end
 
   def test_5XX_error_retry
@@ -100,14 +104,15 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       post_retry_interval 0.1
     ])
 
-    time = Time.parse("2010-01-02 13:14:15 UTC").to_i
-    d.emit({ "message" => "1" }, time)
-    d.run
+    [TIME_OBJ.to_i, TIME_OBJ.to_f].each do |time|
+      d.emit({ "message" => "1" }, time)
+      d.run
 
-    assert_requested :post, "https://localhost:8089/services/collector",
-      headers: {"Authorization" => "Splunk changeme"},
-      body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "1" },
-      times: 5
+      assert_requested :post, "https://localhost:8089/services/collector",
+        headers: {"Authorization" => "Splunk changeme"},
+        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "1" },
+        times: 5
+    end
   end
 
   def test_write_splitting
@@ -120,23 +125,24 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       batch_size_limit 250
     ])
 
-    time = Time.parse("2010-01-02 13:14:15 UTC").to_i
-    d.emit({"message" => "a" }, time)
-    d.emit({"message" => "b" }, time)
-    d.emit({"message" => "c" }, time)
-    d.run
+    [TIME_OBJ.to_i, TIME_OBJ.to_f].each do |time|
+      d.emit({"message" => "a" }, time)
+      d.emit({"message" => "b" }, time)
+      d.emit({"message" => "c" }, time)
+      d.run
 
-    assert_requested :post, "https://localhost:8089/services/collector",
-      headers: {"Authorization" => "Splunk changeme"},
-      body:
-        { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "a" }.to_json +
-        { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "b" }.to_json,
-      times: 1
-    assert_requested :post, "https://localhost:8089/services/collector",
-      headers: {"Authorization" => "Splunk changeme"},
-      body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "c" }.to_json,
-      times: 1
-    assert_requested :post, "https://localhost:8089/services/collector", times: 2
+      assert_requested :post, "https://localhost:8089/services/collector",
+        headers: {"Authorization" => "Splunk changeme"},
+        body:
+          { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "a" }.to_json +
+          { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "b" }.to_json,
+        times: 1
+      assert_requested :post, "https://localhost:8089/services/collector",
+        headers: {"Authorization" => "Splunk changeme"},
+        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "c" }.to_json,
+        times: 1
+      assert_requested :post, "https://localhost:8089/services/collector", times: 2
+    end
   end
 
   def test_utf8
@@ -148,13 +154,14 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       all_items true
     ])
 
-    time = Time.parse("2010-01-02 13:14:15 UTC").to_i
-    d.emit({ "some" => { "nested" => "ü†f-8".force_encoding("BINARY"), "with" => ['ü', '†', 'f-8'].map {|c| c.force_encoding("BINARY") } } }, time)
-    d.run
+    [TIME_OBJ.to_i, TIME_OBJ.to_f].each do |time|
+      d.emit({ "some" => { "nested" => "ü†f-8".force_encoding("BINARY"), "with" => ['ü', '†', 'f-8'].map {|c| c.force_encoding("BINARY") } } }, time)
+      d.run
 
-    assert_requested :post, "https://localhost:8089/services/collector",
-      headers: {"Authorization" => "Splunk changeme"},
-      body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: { some: { nested: "     f-8", with: ["  ","   ","f-8"]}}},
-      times: 1
+      assert_requested :post, "https://localhost:8089/services/collector",
+        headers: {"Authorization" => "Splunk changeme"},
+        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: { some: { nested: "     f-8", with: ["  ","   ","f-8"]}}},
+        times: 1
+    end
   end
 end
