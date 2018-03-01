@@ -103,6 +103,7 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
     ])
 
     [TIME_OBJ.to_i, TIME_OBJ.to_f].each do |time|
+      request_count = 0
       d.emit({ "message" => "1" }, time)
       d.run
 
