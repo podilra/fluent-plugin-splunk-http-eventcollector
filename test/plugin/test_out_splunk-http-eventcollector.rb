@@ -40,8 +40,7 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
           'Content-Type' => 'application/json',
           'User-Agent' => 'fluent-plugin-splunk-http-eventcollector/0.0.1'
         },
-        body: { time: time, source:"test", sourcetype: "fluentd", host: "", index: "main", event: "a message" },
-        times: 1
+        body: { time: time, source:"test", sourcetype: "fluentd", host: "", index: "main", event: "a message" }
     end
   end
 
@@ -61,8 +60,7 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
 
       assert_requested :post, "https://localhost:8089/services/collector/event",
         headers: {"Authorization" => "Splunk changeme"},
-        body: { time: time, source: "source-from-record", sourcetype: "test", host: "", index: "main", event: "a message" },
-        times: 1
+        body: { time: time, source: "source-from-record", sourcetype: "test", host: "", index: "main", event: "a message" }
     end
   end
 
@@ -80,7 +78,7 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       assert_requested :post, "https://localhost:8089/services/collector/event",
         headers: {"Authorization" => "Splunk changeme"},
         body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "1" },
-        times: 1
+        times: (case time when Integer then 1 when Float then 2 end)
     end
   end
 
@@ -111,7 +109,7 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       assert_requested :post, "https://localhost:8089/services/collector/event",
         headers: {"Authorization" => "Splunk changeme"},
         body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "1" },
-        times: 5
+        times: (case time when Integer then 5 when Float then 10 end)
     end
   end
 
@@ -135,14 +133,12 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
         headers: {"Authorization" => "Splunk changeme"},
         body:
           { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "a" }.to_json +
-          { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "b" }.to_json,
-        times: 1
+          { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "b" }.to_json
       assert_requested :post, "https://localhost:8089/services/collector/event",
         headers: {"Authorization" => "Splunk changeme"},
-        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "c" }.to_json,
-        times: 1
-      assert_requested :post, "https://localhost:8089/services/collector/event", times: 2
+        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "c" }.to_json
     end
+    assert_requested :post, "https://localhost:8089/services/collector/event", times: 4
   end
 
   def test_utf8
@@ -160,8 +156,7 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
 
       assert_requested :post, "https://localhost:8089/services/collector/event",
         headers: {"Authorization" => "Splunk changeme"},
-        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: { some: { nested: "     f-8", with: ["  ","   ","f-8"]}}},
-        times: 1
+        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: { some: { nested: "     f-8", with: ["  ","   ","f-8"]}}}
     end
   end
 end
