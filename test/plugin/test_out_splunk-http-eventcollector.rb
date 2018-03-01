@@ -135,8 +135,8 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       assert_requested :post, "https://localhost:8089/services/collector/event",
         headers: {"Authorization" => "Splunk changeme"},
         body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "c" }.to_json
-      assert_requested :post, "https://localhost:8089/services/collector/event", times: 2
     end
+    assert_requested :post, "https://localhost:8089/services/collector/event", times: 4
   end
 
   def test_utf8
