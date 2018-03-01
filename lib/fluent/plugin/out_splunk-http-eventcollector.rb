@@ -41,6 +41,8 @@ class SplunkHTTPEventcollectorOutput < BufferedOutput
   config_param :verify, :bool, :default => true
   config_param :token, :string, :default => nil
 
+  config_param :proxy, :string, :default => nil
+
   # Event parameters
   config_param :protocol, :string, :default => 'https'
   config_param :host, :string, :default => nil
@@ -113,17 +115,36 @@ class SplunkHTTPEventcollectorOutput < BufferedOutput
       raise ConfigError, "Unable to parse the server into a URI."
     end
 
+    unless @proxy.nil?
+      if @proxy.downcase == 'env'
+        @proxy = :ENV
+      else
+        begin
+          @proxy = URI(normalize_uri(@proxy))
+        rescue URI::Error => e
+          raise ConfigError, "Unable to parse proxy value: #{e}"
+        end
+      end
+    end
+
     @placeholder_expander = Fluent::SplunkHTTPEventcollectorOutput.placeholder_expander(log)
     @hostname = Socket.gethostname
     # TODO Add other robust input/syntax checks.
   end  # configure
+
+  ## Copied from Net::HTTP::Persistent
+  # Adds "http://" to the String +uri+ if it is missing.
+  def normalize_uri uri
+    (uri =~ /^https?:/) ? uri : "http://#{uri}"
+  end
 
   ## This method is called when starting.
   ## Open sockets or files here.
   def start
     super
     log.trace "splunk-http-eventcollector(start) called"
-    @http = Net::HTTP::Persistent.new 'fluent-plugin-splunk-http-eventcollector'
+
+    @http = Net::HTTP::Persistent.new('fluent-plugin-splunk-http-eventcollector', @proxy)
     @http.verify_mode = OpenSSL::SSL::VERIFY_NONE unless @verify
     @http.override_headers['Content-Type'] = 'application/json'
     @http.override_headers['User-Agent'] = 'fluent-plugin-splunk-http-eventcollector/0.0.1'
