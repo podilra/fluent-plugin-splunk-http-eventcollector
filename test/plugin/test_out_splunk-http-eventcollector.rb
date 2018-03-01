@@ -157,23 +157,4 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: { some: { nested: "     f-8", with: ["  ","   ","f-8"]}}},
       times: 1
   end
-
-  def test_utf8
-    stub_request(:post, "https://localhost:8089/services/collector").
-      with(headers: {"Authorization" => "Splunk changeme"}).
-      to_return(body: '{"text":"Success","code":0}')
-
-    d = create_driver(CONFIG + %[
-      all_items true
-    ])
-
-    time = Time.parse("2010-01-02 13:14:15 UTC").to_i
-    d.emit({ "some" => { "nested" => "ü†f-8".force_encoding("BINARY"), "with" => ['ü', '†', 'f-8'].map {|c| c.force_encoding("BINARY") } } }, time)
-    d.run
-
-    assert_requested :post, "https://localhost:8089/services/collector",
-      headers: {"Authorization" => "Splunk changeme"},
-      body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: { some: { nested: "     f-8", with: ["  ","   ","f-8"]}}},
-      times: 1
-  end
 end
