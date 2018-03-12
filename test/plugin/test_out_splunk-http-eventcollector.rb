@@ -118,25 +118,28 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
       with(headers: {"Authorization" => "Splunk changeme"}).
       to_return(body: '{"text":"Incorrect data format","code":5,"invalid-event-number":0}', status: 400)
 
-      # A single msg is ~110 bytes
-      d = create_driver(CONFIG + %[
-        batch_size_limit 250
-      ])
-      d.emit({"message" => "a" }, time)
-      d.emit({"message" => "b" }, time)
-      d.emit({"message" => "c" }, time)
-      d.run
+    # A single msg is ~110 bytes
+    d = create_driver(CONFIG + %[
+      batch_size_limit 250
+    ])
 
-      assert_requested :post, "https://localhost:8089/services/collector/event",
-        headers: {"Authorization" => "Splunk changeme"},
-        body:
-          { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "a" }.to_json +
-          { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "b" }.to_json
-      assert_requested :post, "https://localhost:8089/services/collector/event",
-        headers: {"Authorization" => "Splunk changeme"},
-        body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "c" }.to_json
-    end
-    assert_requested :post, "https://localhost:8089/services/collector/event", times: 4
+    time = Time.parse("2010-01-02 13:14:15 UTC").to_f
+    d.emit({"message" => "a" }, time)
+    d.emit({"message" => "b" }, time)
+    d.emit({"message" => "c" }, time)
+    d.run
+
+    assert_requested :post, "https://localhost:8089/services/collector",
+      headers: {"Authorization" => "Splunk changeme"},
+      body:
+        { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "a" }.to_json +
+        { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "b" }.to_json,
+      times: 1
+    assert_requested :post, "https://localhost:8089/services/collector",
+      headers: {"Authorization" => "Splunk changeme"},
+      body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: "c" }.to_json,
+      times: 1
+    assert_requested :post, "https://localhost:8089/services/collector", times: 2
   end
 
   def test_utf8
@@ -156,5 +159,25 @@ class SplunkHTTPEventcollectorOutputTest < Test::Unit::TestCase
         body: { time: time, source: "test", sourcetype: "fluentd", host: "", index: "main", event: { some: { nested: "     f-8", with: ["  ","   ","f-8"]}}},
         times: (case time when Integer then 1 when Float then 2 end)
     end
+  end
+
+  def test_write_fields
+    stub_request(:post, "https://localhost:8089/services/collector").
+        with(headers: {"Authorization" => "Splunk changeme"}).
+        to_return(body: '{"text":"Success","code":0}')
+
+    d = create_driver(CONFIG + %[
+      fields { "cluster": "aws" }
+      source ${record["source"]}
+    ])
+
+    time = Time.parse("2010-01-02 13:14:15 UTC").to_i
+    d.emit({ "message" => "a message", "source" => "source-from-record"}, time)
+    d.run
+
+    assert_requested :post, "https://localhost:8089/services/collector",
+      headers: {"Authorization" => "Splunk changeme"},
+      body: { time: time, source: "source-from-record", sourcetype: "fluentd", host: "", index: "main", event: "a message", fields: { cluster: "aws" } },
+      times: 1
   end
 end
